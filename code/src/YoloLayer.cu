@@ -91,19 +91,19 @@ namespace nvinfer1
         };
 
         int totalOutputCount = 0;
-            int i = 0;
+        int i = 0;
         int totalCount = 0;
-            for(const auto& yolo : mYoloKernel)
-            {
-            totalOutputCount += yolo.width*yolo.height * CHECK_COUNT * sizeof(Detection) / sizeof(float);
-            totalCount += (LOCATIONS + 1 + mClassCount) * yolo.width*yolo.height * CHECK_COUNT;
-            ++ i;
+        for(const auto& yolo : mYoloKernel)
+        {
+			totalOutputCount += yolo.width*yolo.height * CHECK_COUNT * sizeof(Detection) / sizeof(float);
+			totalCount += (LOCATIONS + 1 + mClassCount) * yolo.width*yolo.height * CHECK_COUNT;
+			++ i;
         }
 
         for (int idx = 0; idx < batchSize;idx++)
         {
             i = 0;
-            float* inputData = (float *)mInputBuffer;// + idx *totalCount; //if create more batch size
+            float* inputData = (float *)mInputBuffer + idx *totalCount; //if create more batch size
             for(const auto& yolo : mYoloKernel)
             {
                 int size = (LOCATIONS + 1 + mClassCount) * yolo.width*yolo.height * CHECK_COUNT;
@@ -112,9 +112,9 @@ namespace nvinfer1
                 ++ i;
             }
 
-            CUDA_CHECK(cudaStreamSynchronize(stream));
+            //CUDA_CHECK(cudaStreamSynchronize(stream));
 
-            inputData = (float *)mInputBuffer ;//+ idx *totalCount; //if create more batch size
+            inputData = (float *)mInputBuffer + idx *totalCount; //if create more batch size
             std::vector <Detection> result;
             for (const auto& yolo : mYoloKernel)
             {
@@ -165,7 +165,7 @@ namespace nvinfer1
 
             
             int detCount =result.size();
-            auto data = (float *)mOutputBuffer;// + idx*(totalOutputCount + 1); //if create more batch size
+            auto data = (float *)mOutputBuffer + idx*(totalOutputCount + 1); //if create more batch size
             float * begin = data;
             //copy count;
             data[0] = (float)detCount;
@@ -176,7 +176,7 @@ namespace nvinfer1
             //(count + det result)
             CUDA_CHECK(cudaMemcpyAsync(outputs, begin,sizeof(float) + result.size()*sizeof(Detection), cudaMemcpyHostToDevice, stream));
 
-            outputs += totalOutputCount + 1;
+			outputs += totalOutputCount + 1;
         }
     };
 
